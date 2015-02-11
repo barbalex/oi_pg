@@ -11,6 +11,73 @@ var nano    = require('nano')('http://barbalex:dLhdMg12@127.0.0.1:5984'),
         include_docs: true
     });
 
+function removeRoleFromUsersDb(users, roleName) {
+    var userDocnameKeys,
+        userDocnames,
+        userDocs,
+        userDocsBulkObject;
+
+    // get users from central DB
+    userDocnameKeys = _.map(users, function (user) {
+        return 'org.couchdb.user:' + user;
+    });
+    userDocnames      = {};
+    userDocnames.keys = userDocnameKeys;
+
+    usersDB.fetch(userDocnames, function (err, body) {
+        if (err) { return console.log('error getting users: ', err); }
+        userDocs = _.map(body.rows, function (row) {
+            return row.doc;
+        });
+
+        // remove role from the users in _users
+        _.each(userDocs, function (userDoc) {
+            userDoc.roles = _.without(userDoc.roles, roleName);
+        });
+        userDocsBulkObject      = {};
+        userDocsBulkObject.docs = userDocs;
+
+        usersDB.bulk(userDocsBulkObject, function (err, body) {
+            if (err) { return console.log('error updating userDocs: ', err); }
+            //console.log('updated userDocs, removed role: ', body);
+        });
+    });
+
+}
+
+function addRoleToUsersDb(users, roleName) {
+    var userDocnameKeys,
+        userDocnames,
+        userDocs,
+        userDocsBulkObject;
+
+    // get users from central DB
+    userDocnameKeys = _.map(users, function (user) {
+        return 'org.couchdb.user:' + user;
+    });
+    userDocnames      = {};
+    userDocnames.keys = userDocnameKeys;
+
+    usersDB.fetch(userDocnames, function (err, body) {
+        if (err) { return console.log('error getting users: ', err); }
+        userDocs = _.map(body.rows, function (row) {
+            return row.doc;
+        });
+
+        // add new role to the users in _users
+        _.each(userDocs, function (userDoc) {
+            // be sure to add every role only once
+            userDoc.roles = _.union(userDoc.roles, [roleName]);
+        });
+        userDocsBulkObject      = {};
+        userDocsBulkObject.docs = userDocs;
+        usersDB.bulk(userDocsBulkObject, function (err, body) {
+            if (err) { return console.log('error updating userDocs: ', err); }
+            //console.log('updated userDocs with new role: ', body);
+        });
+    });
+}
+
 feed.on('change', function (change) {
     // check the revs
     oiDb.get(change.id, { revs: true, open_revs: 'all'}, function (err, body) {
@@ -20,7 +87,12 @@ feed.on('change', function (change) {
             revHash   = revisions.start - 1 + '-' + revisions.ids[1],
             doc,
             projectDbName,
-            projectDbNameDb;
+            projectDbNameDb,
+            userDocnameKeys,
+            userDocnames,
+            userDocs,
+            userDocsBulkObject,
+            securityDoc;
 
         if (change.deleted) {
             // a doc was deleted
@@ -37,7 +109,8 @@ feed.on('change', function (change) {
                         console.log('deleted database ' + projectDbName);
                     });
 
-                    // TODO: remove the role from the users userDoc
+                    // remove the role from all the users userDocs
+                    removeRoleFromUsersDb(doc.users, projectDbName);
                 }
             });
         } else {
@@ -47,58 +120,15 @@ feed.on('change', function (change) {
                 // a new doc was created
                 if (doc && doc.type && doc.type === 'object' && !doc.parent) {
                     // a new project was created
-
-                    console.log('new project created');
-
-                    // create a new database for id
+                    // create a new database for the project
                     projectDbName = 'project_' + change.id;
                     nano.db.create(projectDbName, function (err) {
                         if (err) { return console.log('error creating new database ' + projectDbName + ': ', err); }
 
-                        var users = doc.users,
-                            userDocnameKeys,
-                            userDocnames,
-                            userDocs,
-                            userDocsBulkObject,
-                            securityDoc;
+                        // add role for all users in _users db
+                        addRoleToUsersDb(doc.users, projectDbName);
 
-                        console.log('created database ' + projectDbName);
-                        console.log('users: ', users);
-
-                        // TODO: copy the project's users from central DB to new project db
-                        // get users from central DB
-                        userDocnameKeys = _.map(users, function (user) {
-                            return 'org.couchdb.user:' + user;
-                        });
-                        userDocnames      = {};
-                        userDocnames.keys = userDocnameKeys;
-
-                        console.log('userDocnames: ', userDocnames);
-
-                        usersDB.fetch(userDocnames, function (err, body) {
-                            if (err) { return console.log('error getting users: ', err); }
-                            console.log('body of userDocs: ', body);
-                            userDocs = _.map(body.rows, function (row) {
-                                return row.doc;
-                            });
-                            console.log('userDocs: ', userDocs);
-
-                            // add new role to the users in central DB
-                            _.each(userDocs, function (userDoc) {
-                                // be shure to add every role only once
-                                userDoc.roles = _.union(userDoc.roles, [projectDbName]);
-                            });
-                            userDocsBulkObject      = {};
-                            userDocsBulkObject.docs = userDocs;
-                            usersDB.bulk(userDocsBulkObject, function (err, body) {
-                                if (err) { return console.log('error updating userDocs: ', err); }
-                                console.log('updated userDocs with new role: ', body);
-                            });
-                        });
-
-                        console.log('projectDbName: ', projectDbName);
-
-                        // SET UP READ PERMISSIONS FOR THESE USERS
+                        // set up read permissions for these users
                         // create security doc
                         securityDoc               = {};
                         securityDoc.admins        = {};
@@ -110,7 +140,7 @@ feed.on('change', function (change) {
                         projectDbNameDb = nano.use(projectDbName);
                         projectDbNameDb.insert(securityDoc, '_security', function (err, body) {
                             if (err) { return console.log('error setting _security in new project DB: ', err); }
-                            console.log('answer from setting _security in new project DB: ', body);
+                            //console.log('answer from setting _security in new project DB: ', body);
                         });
                     });
                 }
@@ -121,10 +151,27 @@ feed.on('change', function (change) {
                     // if users were changed, update their roles in the _users database
                     oiDb.get(change.id, { rev: revHash}, function (err, oldDoc) {
                         if (err) { return console.log('error getting doc version before changed: ', err); }
+                        var usersToAddRole,
+                            usersToRemoveRole,
+                            roleName;
+
                         if (oldDoc.users && doc.users && oldDoc.users !== doc.users) {
                             // users were changed
-                            // TODO: update users roles in _users database
+                            roleName = 'project_' + doc._id;
 
+                            console.log('users were changed in doc: ', change.id);
+
+                            // TODO: update users roles in _users database
+                            // find users to add a role = users that have been added
+                            usersToAddRole = _.without(doc.users, oldDoc.users);
+                            if (usersToAddRole.length > 0) {
+                                addRoleToUsersDb(usersToAddRole, roleName);
+                            }
+                            // find users to remove a role = users that have been removed
+                            usersToRemoveRole = _.without(oldDoc.users, doc.users);
+                            if (usersToAddRole.length > 0) {
+                                removeRoleFromUsersDb(usersToRemoveRole, roleName);
+                            }
                         }
                     });
 
