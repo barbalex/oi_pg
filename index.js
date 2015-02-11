@@ -88,10 +88,6 @@ feed.on('change', function (change) {
             doc,
             projectDbName,
             projectDbNameDb,
-            userDocnameKeys,
-            userDocnames,
-            userDocs,
-            userDocsBulkObject,
             securityDoc;
 
         if (change.deleted) {
@@ -158,10 +154,7 @@ feed.on('change', function (change) {
                         if (oldDoc.users && doc.users && oldDoc.users !== doc.users) {
                             // users were changed
                             roleName = 'project_' + doc._id;
-
-                            console.log('users were changed in doc: ', change.id);
-
-                            // TODO: update users roles in _users database
+                            // update users roles in _users database
                             // find users to add a role = users that have been added
                             usersToAddRole = _.without(doc.users, oldDoc.users);
                             if (usersToAddRole.length > 0) {
