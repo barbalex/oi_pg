@@ -1,0 +1,19 @@
+{
+  "name": "oi_pg",
+  "version": "1.0.0",
+  "description": "watches changes stream of oi. Generates new databases per project when new projects are created",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "oi_pg"
+  },
+  "author": "Alexander Gabriel",
+  "license": "ISC",
+  "dependencies": {
+    "nano": "^6.0.2",
+    "underscore": "^1.7.0"
+  }
+}
