@@ -17,7 +17,7 @@ function removeRoleFromUsersDb(users, roleName) {
         userDocs,
         userDocsBulkObject;
 
-    // get users from central DB
+    // get users from _users db
     userDocnameKeys = _.map(users, function (user) {
         return 'org.couchdb.user:' + user;
     });
@@ -80,7 +80,7 @@ function addRoleToUsersDb(users, roleName) {
 
 feed.on('change', function (change) {
     // check the revs
-    oiDb.get(change.id, { revs: true, open_revs: 'all'}, function (err, body) {
+    oiDb.get(change.id, { revs: true, open_revs: 'all' }, function (err, body) {
         if (err) { return console.log('error getting revs of doc: ', err); }
 
         var revisions = body[0].ok._revisions,
