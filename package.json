@@ -16,5 +16,6 @@
   "dependencies": {
     "nano": "^6.0.2",
     "underscore": "^1.7.0"
-  }
+  },
+  "devDependencies": {}
 }
