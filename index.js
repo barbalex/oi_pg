@@ -22,7 +22,7 @@ nano.db.list(function (error, dbs) {
 
     // start listening to changes in all project-dbs
     _.each(projectDbs, function (projectDb) {
-        feed = nano.use('projectDb').follow({
+        feed = nano.use(projectDb).follow({
             since:        'now',
             live:         true,
             include_docs: true

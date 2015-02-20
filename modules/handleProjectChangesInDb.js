@@ -4,8 +4,8 @@
 var nano                  = require('nano')('http://barbalex:dLhdMg12@127.0.0.1:5984'),
     usersDB               = nano.use('_users'),
     _                     = require('underscore'),
-    removeRoleFromUsersDb = require('./modules/removeRoleFromUsersDb'),
-    addRoleToUsersDb      = require('./modules/addRoleToUsersDb');
+    removeRoleFromUsersDb = require('./removeRoleFromUsersDb'),
+    addRoleToUsersDb      = require('./addRoleToUsersDb');
 
 module.exports = function (projectDb, change) {
     // check the revs
