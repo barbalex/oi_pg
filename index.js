@@ -2,7 +2,6 @@
 'use strict';
 
 var nano                     = require('nano')('http://barbalex:dLhdMg12@127.0.0.1:5984'),
-    usersDB                  = nano.use('_users'),
     _                        = require('underscore'),
     handleProjectChangesInDb = require('./modules/handleProjectChangesInDb'),
     feed;
@@ -14,7 +13,7 @@ nano.db.list(function (error, dbs) {
     console.log('dbs gotten: ', dbs);
 
     // filter all project-db's
-    var projectDbs = _.filter(dbs, function(db) {
+    var projectDbs = _.filter(dbs, function (db) {
         return db.substr(0, 8) === 'project_';
     });
 
@@ -32,11 +31,4 @@ nano.db.list(function (error, dbs) {
         });
         feed.follow();
     });
-
 });
-
-
-
-
-
-        
