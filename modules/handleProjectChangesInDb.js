@@ -82,7 +82,7 @@ module.exports = function (projectDb, change) {
                             //console.log('answer from setting _security in new project DB: ', body);
                         });
 
-                        // TODO: start listening to changes
+                        // start listening to changes
                         listenToChangesOfDbs([projectDbName]);
                     });
                 }
