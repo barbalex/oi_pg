@@ -5,7 +5,8 @@ var nano                  = require('nano')('http://barbalex:dLhdMg12@127.0.0.1:
     usersDB               = nano.use('_users'),
     _                     = require('underscore'),
     removeRoleFromUsersDb = require('./removeRoleFromUsersDb'),
-    addRoleToUsersDb      = require('./addRoleToUsersDb');
+    addRoleToUsersDb      = require('./addRoleToUsersDb'),
+    listenToChangesOfDbs  = require('./listenToChangesOfDbs');
 
 module.exports = function (projectDb, change) {
     // check the revs
@@ -18,6 +19,8 @@ module.exports = function (projectDb, change) {
             projectDbName,
             projectDbNameDb,
             securityDoc;
+
+        console.log('change: ', change);
 
         if (change.deleted) {
             // a doc was deleted
@@ -36,6 +39,9 @@ module.exports = function (projectDb, change) {
 
                     // remove the role from all the users userDocs
                     removeRoleFromUsersDb(usersDB, doc.users, projectDbName);
+
+                    // stop listening to changes
+                    GLOBAL[projectDbName].stop();
                 }
             });
         } else {
@@ -43,12 +49,20 @@ module.exports = function (projectDb, change) {
             doc = change.doc;
             if (revisions.start === 1) {
                 // a new doc was created
+
+                console.log('change: new doc was created');
+
                 if (doc && doc.type && doc.type === 'object' && !doc.parent) {
                     // a new project was created
+
+                    console.log('change: new project was created');
+
                     // create a new database for the project
                     projectDbName = 'project_' + change.id;
                     nano.db.create(projectDbName, function (err) {
                         if (err) { return console.log('error creating new database ' + projectDbName + ': ', err); }
+
+                        console.log('change: created new db: ', projectDbName);
 
                         // add role for all users in _users db
                         addRoleToUsersDb(usersDB, doc.users, projectDbName);
@@ -67,6 +81,9 @@ module.exports = function (projectDb, change) {
                             if (err) { return console.log('error setting _security in new project DB: ', err); }
                             //console.log('answer from setting _security in new project DB: ', body);
                         });
+
+                        // TODO: start listening to changes
+                        listenToChangesOfDbs([projectDbName]);
                     });
                 }
             } else {

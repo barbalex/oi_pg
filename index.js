@@ -1,9 +1,9 @@
 /*jslint node: true, browser: true, nomen: true, todo: true */
 'use strict';
 
-var nano                     = require('nano')('http://barbalex:dLhdMg12@127.0.0.1:5984'),
-    _                        = require('underscore'),
-    handleProjectChangesInDb = require('./modules/handleProjectChangesInDb'),
+var nano                 = require('nano')('http://barbalex:dLhdMg12@127.0.0.1:5984'),
+    _                    = require('underscore'),
+    listenToChangesOfDbs = require('./modules/listenToChangesOfDbs'),
     feed;
 
 // list all db's
@@ -19,16 +19,5 @@ nano.db.list(function (error, dbs) {
 
     console.log('projectDbs: ', projectDbs);
 
-    // start listening to changes in all project-dbs
-    _.each(projectDbs, function (projectDb) {
-        feed = nano.use(projectDb).follow({
-            since:        'now',
-            live:         true,
-            include_docs: true
-        });
-        feed.on('change', function (change) {
-            handleProjectChangesInDb(nano.use('projectDb'), change);
-        });
-        feed.follow();
-    });
+    listenToChangesOfDbs(projectDbs);
 });
