@@ -8,7 +8,7 @@
 
 var nano                     = require('nano')('http://barbalex:dLhdMg12@127.0.0.1:5984'),
     _                        = require('underscore'),
-    handleProjectChangesInDb = require('./modules/handleProjectChangesInDb'),
+    handleProjectChangesInDb = require('./handleProjectChangesInDb'),
     feed;
 
 module.exports = function (projectDbs) {
