@@ -25,5 +25,7 @@ module.exports = function (projectDbs) {
         feed.follow();
         // give the feed a name so it can later be stopped
         feed = GLOBAL[projectDb];
+        // output result
+        console.log('listning to changes in ', projectDb);
     });
 };
