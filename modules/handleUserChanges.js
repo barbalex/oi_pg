@@ -15,7 +15,7 @@ function insertUserToOiDb(user) {
     delete user._rev;
     delete user.salt;
     delete user.password_scheme;
-    oi.Db.insert(user, function (err, body) {
+    oiDb.insert(user, function (err, body) {
         if (err) { return console.log('error inserting changed userDoc to oiDb: ', err); }
     });
 }
@@ -27,7 +27,6 @@ module.exports = function (change) {
         if (err) { return console.log('error getting revs of doc: ', err); }
 
         var revisions = body[0].ok._revisions,
-            revHash   = revisions.start - 1 + '-' + revisions.ids[1],
             userDoc;
 
         console.log('user change: ', change);
@@ -40,7 +39,7 @@ module.exports = function (change) {
 
             console.log('change: new user was created: ', userDoc.name);
 
-            insertUserToOiDb(user);
+            insertUserToOiDb(userDoc);
         } else {
             // an existing user was changed or deleted
             // update the user doc in oiDb
