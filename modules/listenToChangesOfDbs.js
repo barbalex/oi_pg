@@ -20,7 +20,7 @@ module.exports = function (projectDbs) {
             include_docs: true
         });
         feed.on('change', function (change) {
-            handleProjectChangesInDb(nano.use('projectDb'), change);
+            handleProjectChangesInDb(nano.use(projectDb), change);
         });
         feed.follow();
         // give the feed a name so it can later be stopped
