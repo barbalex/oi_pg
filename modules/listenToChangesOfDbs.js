@@ -15,7 +15,7 @@ module.exports = function (projectDbs) {
     // start listening to changes in all project-dbs
     _.each(projectDbs, function (projectDb) {
         feed = nano.use(projectDb).follow({
-            since:        'now',
+            //since:        'now',
             live:         true,
             include_docs: true
         });
@@ -26,6 +26,6 @@ module.exports = function (projectDbs) {
         // give the feed a name so it can later be stopped
         feed = GLOBAL[projectDb];
         // output result
-        console.log('listning to changes in ', projectDb);
+        console.log('listening to changes in ', projectDb);
     });
 };

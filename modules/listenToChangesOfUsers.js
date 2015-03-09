@@ -1,6 +1,6 @@
 /*
  * listens to changes in the _users db
- * keeps user docs in the oi db in sync
+ * handleUserChanges keeps user docs in the oi db in sync
  */
 
 /*jslint node: true, browser: true, nomen: true, todo: true */
@@ -20,5 +20,5 @@ module.exports = function () {
     feed.on('change', handleUserChanges);
     feed.follow();
     // output result
-    console.log('listning to changes of users');
+    console.log('listening to changes of users');
 };
