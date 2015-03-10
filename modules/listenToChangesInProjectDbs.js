@@ -8,7 +8,7 @@
 
 var nano                     = require('nano')('http://barbalex:dLhdMg12@127.0.0.1:5984'),
     _                        = require('underscore'),
-    handleProjectChangesInDb = require('./handleProjectChangesInDb'),
+    handleChangesInProjectDb = require('./handleChangesInProjectDb'),
     feed;
 
 module.exports = function (projectDbs) {
@@ -20,7 +20,7 @@ module.exports = function (projectDbs) {
             include_docs: true
         });
         feed.on('change', function (change) {
-            handleProjectChangesInDb(nano.use(projectDb), change);
+            handleChangesInProjectDb(nano.use(projectDb), change);
         });
         feed.follow();
         // give the feed a name so it can later be stopped

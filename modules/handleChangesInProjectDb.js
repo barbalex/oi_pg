@@ -6,7 +6,8 @@ var nano                  = require('nano')('http://barbalex:dLhdMg12@127.0.0.1:
     _                     = require('underscore'),
     removeRoleFromUsersDb = require('./removeRoleFromUsersDb'),
     addRoleToUsersDb      = require('./addRoleToUsersDb'),
-    listenToChangesOfDbs  = require('./listenToChangesOfDbs');
+    listenToChangesOfDbs  = require('./listenToChangesOfDbs'),
+    deleteDatabase        = require('./deleteDatabase');
 
 module.exports = function (projectDb, change) {
     // check the revs
@@ -32,10 +33,7 @@ module.exports = function (projectDb, change) {
                     // a project was deleted
                     // delete this project's database
                     projectDbName = 'project_' + change.id;
-                    nano.db.destroy(projectDbName, function (err) {
-                        if (err) { return console.log('error deleting database ' + projectDbName + ': ', err); }
-                        console.log('deleted database ' + projectDbName);
-                    });
+                    deleteDatabase(projectDbName);
 
                     // remove the role from all the users userDocs
                     removeRoleFromUsersDb(usersDB, doc.users, projectDbName);
