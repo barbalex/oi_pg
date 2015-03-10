@@ -45,7 +45,7 @@ module.exports = function (change) {
 
         console.log('user change: ', change);
 
-        userDbName = 'user_' + change.id;
+        userDbName = 'user_' + change.id.replace('@', '__at__').replace('.', '__p__');
 
         // a new user was created, an existing changed or deleted
         if (change.deleted) {
@@ -98,7 +98,7 @@ module.exports = function (change) {
                     });
 
                     // add the user as doc, without rev
-                    delete userDoc.rev;
+                    delete userDoc._rev;
                     userDb.insert(userDoc, function (err, body) {
                         if (err) { return console.log('error adding user doc to new user DB ' + userDbName + ': ', err); }
                         //console.log('answer from adding user doc to new user DB: ', body);

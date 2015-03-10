@@ -21,7 +21,7 @@ nano.db.list(function (error, dbs) {
     });
 
     userDbs = _.filter(dbs, function (db) {
-        return db.substr(0, 8) === 'user_';
+        return db.substr(0, 5) === 'user_';
     });
 
     //console.log('projectDbs: ', projectDbs);
