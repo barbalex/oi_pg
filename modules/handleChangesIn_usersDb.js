@@ -1,30 +1,37 @@
 /*
- * When a users was changed,
- * TODO
+ * Goal is:
+ * - every user has a userDb
+ * - it contains user specific information
+ * - namely: a list of projects
+ * - the userDb is synced to pouch
+ * - when the app starts up, it get's a list of projects from the userDb
+ * - and loads the projects data
+ *
+ * When a users userDoc was changed, it is changed in the userDb too
+ * When a users userDoc was deleted:
+ * - the user Db is deleted
+ * - the users project-DB's too, if no other user was using them
+ * - if so, the user is removed from all docs .users field
+ * When a new user is created:
+ * - a userDb is created
+ * - with exclusive rights
+ * - the _users userDoc is added to the userDb
+ * - oi_pg starts listening to changes in the userDb
  */
 
 /*jslint node: true, browser: true, nomen: true, todo: true */
 'use strict';
 
 var nano                       = require('nano')('http://barbalex:dLhdMg12@127.0.0.1:5984'),
-    usersDB                    = nano.use('_users'),
-    oiDb                       = nano.use('oi'),
+    _usersDb                   = nano.use('_users'),
     removeUsersDocsAndProjects = require('./removeUsersDocsAndProjects'),
-    deleteDatabase             = require('./deleteDatabase');
-
-function insertUserToOiDb(user) {
-    delete user._rev;
-    delete user.salt;
-    delete user.password_scheme;
-    oiDb.insert(user, function (err, body) {
-        if (err) { return console.log('error inserting changed userDoc to oiDb: ', err); }
-    });
-}
+    deleteDatabase             = require('./deleteDatabase'),
+    listenToChangesInUsersDbs  = require('./listenToChangesInUsersDbs');
 
 module.exports = function (change) {
 
     // check the revs
-    usersDB.get(change.id, { revs: true, open_revs: 'all' }, function (err, body) {
+    _usersDb.get(change.id, { revs: true, open_revs: 'all' }, function (err, body) {
         if (err) { return console.log('error getting revs of doc: ', err); }
 
         var revisions = body[0].ok._revisions,
@@ -32,18 +39,19 @@ module.exports = function (change) {
             userDoc,
             userDbName,
             userName,
-            userProjects;
+            userDb,
+            userProjects,
+            securityDoc;
 
         console.log('user change: ', change);
 
-        // a new user was created, an existing changed or deleted
-        userDoc = change.doc;
+        userDbName = 'user_' + change.id;
 
+        // a new user was created, an existing changed or deleted
         if (change.deleted) {
             // user was deleted
-            // TODO: delete userDb
-            // get last doc version before deleted
-            usersDB.get(change.id, { rev: revHash}, function (err, doc) {
+            // get last doc version before deleted to know the user.name and user.roles
+            _usersDb.get(change.id, { rev: revHash}, function (err, doc) {
                 if (err) { return console.log('error getting userDoc version before deleted: ', err); }
                 if (doc) {
                     // a user was deleted
@@ -55,7 +63,6 @@ module.exports = function (change) {
                     removeUsersDocsAndProjects(userName, userProjects);
 
                     // delete this user's database
-                    userDbName = 'user_' + change.id;
                     deleteDatabase(userDbName);
 
                     // stop listening to changes
@@ -63,19 +70,52 @@ module.exports = function (change) {
                 }
             });
         } else {
+            userDoc = change.doc;
             if (revisions.start === 1) {
                 // a new user was created
+                // create a new user db
 
                 console.log('change: new user was created: ', userDoc.name);
 
-                insertUserToOiDb(userDoc);
+                nano.db.create(userDbName, function (err) {
+                    if (err) { return console.log('error creating new user database ' + userDbName + ': ', err); }
+
+                    console.log('change: created new user db: ', userDbName);
+
+                    // set up read permissions for the user
+                    // create security doc
+                    securityDoc               = {};
+                    securityDoc.admins        = {};
+                    securityDoc.admins.names  = [];
+                    securityDoc.admins.roles  = [];
+                    securityDoc.members       = {};
+                    securityDoc.members.names = [userName];
+                    securityDoc.members.roles = [];
+                    userDb = nano.use(userDbName);
+                    userDb.insert(securityDoc, '_security', function (err, body) {
+                        if (err) { return console.log('error setting _security in new user DB: ', err); }
+                        //console.log('answer from setting _security in new user DB: ', body);
+                    });
+
+                    // add the user as doc, without rev
+                    delete userDoc.rev;
+                    userDb.insert(userDoc, function (err, body) {
+                        if (err) { return console.log('error adding user doc to new user DB ' + userDbName + ': ', err); }
+                        //console.log('answer from adding user doc to new user DB: ', body);
+                    });
+
+                    // start listening to changes
+                    listenToChangesInUsersDbs([userDbName]);
+                });
             } else {
-                // an existing user was changed or deleted
-                // update the user doc in oiDb
-                oiDb.get(change.id, function (err, oiUserDoc) {
-                    if (err) { return console.log('error getting user from oiDb: ', err); }
-                    userDoc._rev = oiUserDoc._rev;
-                    insertUserToOiDb(userDoc);
+                // an existing user was changed
+                // update the user doc in the users db
+                userDb.get(change.id, function (err, userdbUserDoc) {
+                    if (err) { return console.log('error getting user from userDb ' + userDbName + ': ', err); }
+                    userDoc._rev = userdbUserDoc._rev;
+                    userDb.insert(userDoc, function (err, body) {
+                        if (err) { return console.log('error inserting changed userDoc to userDb ' + userDbName + ': ', err); }
+                    });
                 });
             }
         }

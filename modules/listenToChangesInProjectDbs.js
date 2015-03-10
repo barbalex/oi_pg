@@ -1,5 +1,5 @@
 /*
- * gets an array of dbs
+ * gets an array of project dbs
  * starts listening to them
  */
 
@@ -26,6 +26,6 @@ module.exports = function (projectDbs) {
         // give the feed a name so it can later be stopped
         feed = GLOBAL[projectDb];
         // output result
-        console.log('listening to changes in ', projectDb);
+        console.log('listening to changes in projectDb ', projectDb);
     });
 };
