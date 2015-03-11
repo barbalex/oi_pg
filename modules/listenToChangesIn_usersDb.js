@@ -20,5 +20,5 @@ module.exports = function () {
     feed.on('change', handleChangesIn_usersDb);
     feed.follow();
     // output result
-    console.log('listening to changes of users');
+    console.log('listening to changes of _users');
 };

@@ -15,7 +15,7 @@ module.exports = function (userDbs) {
     // start listening to changes in all project-dbs
     _.each(userDbs, function (userDb) {
         feed = nano.use(userDb).follow({
-            //since:        'now',
+            since:        'now',
             live:         true,
             include_docs: true
         });
