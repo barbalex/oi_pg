@@ -50,6 +50,7 @@ module.exports = function (userName, projects) {
                             if (err) {
                                 return console.log('error removing user ' + userName + ' from .users field in all docs in DB ' + dbName + ': ', err);
                             }
+                            console.log('removed users ' + userName + ' docs in DB ' + dbName);
                         });
                     }
                 } else {

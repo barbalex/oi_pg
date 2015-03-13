@@ -123,6 +123,7 @@ module.exports = function (change) {
                         userDoc._rev = userdbUserDoc._rev;
                         userDb.insert(userDoc, function (err, body) {
                             if (err) { return console.log('error inserting changed userDoc to userDb ' + userDbName + ': ', err); }
+                            console.log('updated userDB of user: ', userDbName);
                         });
                     });
                 }
