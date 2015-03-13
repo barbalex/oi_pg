@@ -21,7 +21,7 @@ module.exports = function (projectDb, change) {
             projectDbNameDb,
             securityDoc;
 
-        //console.log('change: ', change);
+        console.log('change: ', change);
 
         if (change.deleted) {
             // a doc was deleted
@@ -47,13 +47,13 @@ module.exports = function (projectDb, change) {
             doc = change.doc;
             if (revisions.start === 1) {
                 // a new doc was created
-                if (doc && doc.type && doc.type === 'object' && !doc.parent) {
+                if (doc && doc.type && doc.type === 'object' && !doc.parent && doc.name) {
                     // a new project was created
 
                     //console.log('change: new project was created');
 
                     // create a new database for the project
-                    projectDbName = 'project_' + change.doc.name;
+                    projectDbName = 'project_' + doc.name;
                     nano.db.create(projectDbName, function (err) {
                         if (err) {
                             if (err.statusCode === 412) {
