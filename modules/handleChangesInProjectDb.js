@@ -32,7 +32,7 @@ module.exports = function (projectDb, change) {
                 if (doc && doc.type && doc.type === 'object' && !doc.parent) {
                     // a project was deleted
                     // delete this project's database
-                    projectDbName = 'project_' + change.id;
+                    projectDbName = 'project_' + change.doc.name;
                     deleteDatabase(projectDbName);
 
                     // remove the role from all the users userDocs
@@ -53,7 +53,7 @@ module.exports = function (projectDb, change) {
                     //console.log('change: new project was created');
 
                     // create a new database for the project
-                    projectDbName = 'project_' + change.id;
+                    projectDbName = 'project_' + change.doc.name;
                     nano.db.create(projectDbName, function (err) {
                         if (err) {
                             if (err.statusCode === 412) {
