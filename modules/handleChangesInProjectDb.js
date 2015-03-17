@@ -1,13 +1,13 @@
 /*jslint node: true, browser: true, nomen: true, todo: true */
 'use strict';
 
-var nano                        = require('nano')('http://barbalex:dLhdMg12@127.0.0.1:5984'),
-    usersDB                     = nano.use('_users'),
-    _                           = require('underscore'),
-    removeRoleFromUsersDb       = require('./removeRoleFromUsersDb'),
-    addRoleToUsersDb            = require('./addRoleToUsersDb'),
-    listenToChangesInProjectDbs = require('./listenToChangesInProjectDbs'),
-    deleteDatabase              = require('./deleteDatabase');
+var nano                  = require('nano')('http://barbalex:dLhdMg12@127.0.0.1:5984'),
+    usersDB               = nano.use('_users'),
+    _                     = require('underscore'),
+    removeRoleFromUsersDb = require('./removeRoleFromUsersDb'),
+    addRoleToUsersDb      = require('./addRoleToUsersDb'),
+    deleteDatabase        = require('./deleteDatabase'),
+    createSecurityDoc     = require('./createSecurityDoc');
 
 module.exports = function (projectDb, change) {
     // check the revs
@@ -70,21 +70,12 @@ module.exports = function (projectDb, change) {
 
                         // set up read permissions for these users
                         // create security doc
-                        securityDoc               = {};
-                        securityDoc.admins        = {};
-                        securityDoc.admins.names  = [];
-                        securityDoc.admins.roles  = [];
-                        securityDoc.members       = {};
-                        securityDoc.members.names = [];
-                        securityDoc.members.roles = [projectDbName];
+                        securityDoc = createSecurityDoc(null, projectDbName, 'barbalex');
                         projectDbNameDb = nano.use(projectDbName);
                         projectDbNameDb.insert(securityDoc, '_security', function (err, body) {
                             if (err) { return console.log('error setting _security in new project DB: ', err); }
                             //console.log('answer from setting _security in new project DB: ', body);
                         });
-
-                        // start listening to changes
-                        listenToChangesInProjectDbs([projectDbName]);
                     });
                 }
             } else {

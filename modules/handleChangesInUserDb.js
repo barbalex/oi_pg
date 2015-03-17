@@ -2,16 +2,24 @@
 'use strict';
 
 var nano                        = require('nano')('http://barbalex:dLhdMg12@127.0.0.1:5984'),
-    usersDB                     = nano.use('_users'),
+    _usersDb                    = nano.use('_users'),
     _                           = require('underscore'),
-    removeRoleFromUsersDb       = require('./removeRoleFromUsersDb'),
-    addRoleToUsersDb            = require('./addRoleToUsersDb'),
-    listenToChangesInProjectDbs = require('./listenToChangesInProjectDbs'),
-    deleteDatabase              = require('./deleteDatabase');
+    deleteDatabase              = require('./deleteDatabase'),
+    createSecurityDoc           = require('./createSecurityDoc');
 
-module.exports = function (projectDb, change) {
+module.exports = function (userDb, change) {
+    // was role changed?
+    // compare with last version
+    // if roles were changed:
+    // - always update roles in _users db
+
+    // TODO: if roles added: create new projectDb's
+
+    // TODO: if roles removed: 
+    // - remove projectDb's if no other users use them
+    
     // check the revs
-    projectDb.get(change.id, { revs: true, open_revs: 'all' }, function (err, body) {
+    userDb.get(change.id, { revs: true, open_revs: 'all' }, function (err, body) {
         if (err) { return console.log('error getting revs of doc: ', err); }
 
         var revisions = body[0].ok._revisions,
@@ -23,25 +31,49 @@ module.exports = function (projectDb, change) {
 
         console.log('change: ', change);
 
+        userDb.get(change.id, { rev: revHash}, function (err, oldDoc) {
+            if (err) { return console.log('error getting doc version before changed: ', err); }
+            var rolesAdded,
+                rolesRemoved,
+                newDoc,
+                usersToAddRole,
+                usersToRemoveRole,
+                roleName;
+
+            newDoc = change.doc;
+
+            if (oldDoc.roles && newDoc.roles && oldDoc.roles !== newDoc.roles) {
+                // update roles in _users DB
+                _usersDb.get(newDoc._id, function (error, userDoc) {
+                    if (error) { console.log('error getting user from _users db: ', error); }
+                    userDoc.roles = newDoc.roles;
+                    _usersDb.insert(userDoc, function (error) {
+                        if (error) { console.log('error updating user in _users db: ', error); }
+                        // roles were changed
+                        rolesAdded   = _.without(newDoc.roles, oldDoc.roles);
+                        rolesRemoved = _.without(oldDoc.roles, newDoc.roles);
+
+                        if (rolesAdded) {
+                            // TODO: if roles added: create new projectDb's
+                            
+                        }
+
+                        if (rolesRemoved) {
+                            // TODO: remove projectDb's if no other users use them
+
+                        }
+                    });
+                });
+            }
+        });
+
         if (change.deleted) {
             // a doc was deleted
-            // get last doc version before deleted
-            projectDb.get(change.id, { rev: revHash}, function (err, body) {
-                if (err) { return console.log('error getting doc version before deleted: ', err); }
-                doc = body;
-                if (doc && doc.type && doc.type === 'object' && !doc.parent) {
-                    // a project was deleted
-                    // delete this project's database
-                    projectDbName = 'project_' + change.id;
-                    deleteDatabase(projectDbName);
+            projectDbName = 'project_' + change.id;
+            deleteDatabase(projectDbName);
 
-                    // remove the role from all the users userDocs
-                    removeRoleFromUsersDb(usersDB, doc.users, projectDbName);
-
-                    // stop listening to changes
-                    GLOBAL[projectDbName].stop();
-                }
-            });
+            // stop listening to changes
+            GLOBAL[projectDbName].stop();
         } else {
             // a new doc was created or an existing changed
             doc = change.doc;
@@ -63,25 +95,16 @@ module.exports = function (projectDb, change) {
                         console.log('change: created new db: ', projectDbName);
 
                         // add role for all users in _users db
-                        addRoleToUsersDb(usersDB, doc.users, projectDbName);
+                        addRoleToUsersDb(_usersDb, doc.users, projectDbName);
 
                         // set up read permissions for these users
                         // create security doc
-                        securityDoc               = {};
-                        securityDoc.admins        = {};
-                        securityDoc.admins.names  = [];
-                        securityDoc.admins.roles  = [];
-                        securityDoc.members       = {};
-                        securityDoc.members.names = [];
-                        securityDoc.members.roles = [projectDbName];
+                        securityDoc     = createSecurityDoc(null, projectDbName, 'barbalex');
                         projectDbNameDb = nano.use(projectDbName);
                         projectDbNameDb.insert(securityDoc, '_security', function (err, body) {
                             if (err) { return console.log('error setting _security in new project DB: ', err); }
                             //console.log('answer from setting _security in new project DB: ', body);
                         });
-
-                        // start listening to changes
-                        listenToChangesInProjectDbs([projectDbName]);
                     });
                 }
             } else {
@@ -89,28 +112,7 @@ module.exports = function (projectDb, change) {
                 if (doc && doc.type && doc.type === 'object' && !doc.parent) {
                     // an existing project was changed
                     // if users were changed, update their roles in the _users database
-                    projectDb.get(change.id, { rev: revHash}, function (err, oldDoc) {
-                        if (err) { return console.log('error getting doc version before changed: ', err); }
-                        var usersToAddRole,
-                            usersToRemoveRole,
-                            roleName;
-
-                        if (oldDoc.users && doc.users && oldDoc.users !== doc.users) {
-                            // users were changed
-                            roleName = 'project_' + doc._id;
-                            // update users roles in _users database
-                            // find users to add a role = users that have been added
-                            usersToAddRole = _.without(doc.users, oldDoc.users);
-                            if (usersToAddRole.length > 0) {
-                                addRoleToUsersDb(usersDB, usersToAddRole, roleName);
-                            }
-                            // find users to remove a role = users that have been removed
-                            usersToRemoveRole = _.without(oldDoc.users, doc.users);
-                            if (usersToAddRole.length > 0) {
-                                removeRoleFromUsersDb(usersDB, usersToRemoveRole, roleName);
-                            }
-                        }
-                    });
+                    
 
                 }
             }

@@ -11,7 +11,6 @@
  * When a users userDoc was deleted:
  * - the user Db is deleted
  * - the users project-DB's too, if no other user was using them
- * - if so, the user is removed from all docs .users field
  * When a new user is created:
  * - a userDb is created
  * - with exclusive rights
@@ -22,12 +21,13 @@
 /*jslint node: true, browser: true, nomen: true, todo: true */
 'use strict';
 
-var nano                       = require('nano')('http://barbalex:dLhdMg12@127.0.0.1:5984'),
-    _                          = require('underscore'),
-    _usersDb                   = nano.use('_users'),
-    removeUsersDocsAndProjects = require('./removeUsersDocsAndProjects'),
-    deleteDatabase             = require('./deleteDatabase'),
-    listenToChangesInUsersDbs  = require('./listenToChangesInUsersDbs');
+var nano                      = require('nano')('http://barbalex:dLhdMg12@127.0.0.1:5984'),
+    _                         = require('underscore'),
+    _usersDb                  = nano.use('_users'),
+    removeUsersProjectDbs     = require('./removeUsersProjectDbs'),
+    deleteDatabase            = require('./deleteDatabase'),
+    listenToChangesInUsersDbs = require('./listenToChangesInUsersDbs'),
+    createSecurityDoc         = require('./createSecurityDoc');
 
 module.exports = function (change) {
 
@@ -40,9 +40,12 @@ module.exports = function (change) {
             userDoc,
             userDbName,
             userName,
-            userProjects;
+            userProjects,
+            messageDb;
 
         console.log('user change: ', change);
+
+        messageDb = nano.use('oi_messages');
 
         // a new user was created, an existing changed or deleted
         if (change.deleted) {
@@ -54,23 +57,29 @@ module.exports = function (change) {
                     // a user was deleted
                     userName     = doc.name;
                     userProjects = doc.roles;
-                    userDbName = 'user_' + doc.name.replace('@', '__at__').replace('.', '__p__');
+                    userDbName = 'user_' + doc.name.toLowerCase().replace('@', '_at_').replace('.', '_p_');
 
                     // remove the role from all the users docs
                     // remove projects and their db's that only had this user
-                    removeUsersDocsAndProjects(userName, userProjects);
+                    removeUsersProjectDbs(userName, userProjects);
 
                     // delete this user's database
                     deleteDatabase(userDbName);
 
-                    // stop listening to changes
+                    // stop listening to changes to userDb
                     if (GLOBAL[userDbName]) { GLOBAL[userDbName].stop(); }
+
+                    // remove user from members of message db
+                    messageDb.get('_security', function (error, doc) {
+                        if (error) { console.log('error getting _security of message db: ', error); }
+                        doc.members.names = _.without(doc.members.names, userName);
+                    });
                 }
             });
         } else {
             userDoc    = change.doc;
             userName   = userDoc.name;
-            userDbName = 'user_' + userName.replace('@', '__at__').replace('.', '__p__');
+            userDbName = 'user_' + userName.toLowerCase().replace('@', '_at_').replace('.', '_p_');
             // get list of all databases
             nano.db.list(function (error, dbNames) {
                 var securityDoc,
@@ -92,13 +101,7 @@ module.exports = function (change) {
                         userDb = nano.use(userDbName);
                         // set up read permissions for the user
                         // create security doc
-                        securityDoc               = {};
-                        securityDoc.admins        = {};
-                        securityDoc.admins.names  = [];
-                        securityDoc.admins.roles  = [];
-                        securityDoc.members       = {};
-                        securityDoc.members.names = [userName];
-                        securityDoc.members.roles = [];
+                        securityDoc = createSecurityDoc(userName, null, 'barbalex');
                         userDb.insert(securityDoc, '_security', function (err, body) {
                             if (err) { return console.log('error setting _security in new user DB: ', err); }
                             //console.log('answer from setting _security in new user DB: ', body);
