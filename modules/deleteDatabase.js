@@ -10,7 +10,7 @@ module.exports = function (dbName) {
     nano.db.list(function (error, dbNames) {
         if (error) { return console.log('error getting list of dbs: ', error); }
         if (_.indexOf(dbNames, dbName) >= -1) {
-            // TODO: check if a user uses this db
+            // check if a user uses this db
             _usersDb.list(function (error, body) {
                 if (error) { return console.log('error getting list of users from _users db: ', error); }
                 var users = body.rows,
@@ -21,7 +21,9 @@ module.exports = function (dbName) {
                 });
 
                 if (_.contains(usersRoles, dbName)) {
-                    // DONT remove this db
+                    // another user uses this db
+                    // DONT remove it
+                    console.log('db ' + dbName + ' not deleted because used by other user');
                 } else {
                     nano.db.destroy(dbName, function (err) {
                         if (err) { return console.log('error deleting database ' + dbName + ': ', err); }

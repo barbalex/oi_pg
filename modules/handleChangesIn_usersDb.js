@@ -90,9 +90,6 @@ module.exports = function (change) {
                 if (_.indexOf(dbNames, userDbName) === -1) {
                     // a new user was created
                     // create a new user db
-
-                    console.log('created new user: ', userName);
-
                     nano.db.create(userDbName, function (err) {
                         if (err) { return console.log('error creating new user database ' + userDbName + ': ', err); }
 
@@ -117,9 +114,11 @@ module.exports = function (change) {
                         // start listening to changes
                         listenToChangesInUsersDbs([userDbName]);
                     });
-                } else {
+                }/* else {
                     // an existing user was changed
                     // update the user doc in the users db
+                    // no, don't: users are changed in userDb's, not in _users db
+                    // if we change here, the change listener for the userDb will be called
                     userDb = nano.use(userDbName);
                     userDb.get(change.id, function (err, userdbUserDoc) {
                         if (err) { return console.log('error getting user from userDb ' + userDbName + ': ', err); }
@@ -129,7 +128,7 @@ module.exports = function (change) {
                             console.log('updated userDB of user: ', userDbName);
                         });
                     });
-                }
+                }*/
             });
         }
     });
