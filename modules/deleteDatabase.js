@@ -25,6 +25,8 @@ module.exports = function (dbName) {
                     // DONT remove it
                     console.log('db ' + dbName + ' not deleted because used by other user');
                 } else {
+                    // stop listening to changes to userDb
+                    if (GLOBAL[dbName]) { GLOBAL[dbName].stop(); }
                     nano.db.destroy(dbName, function (err) {
                         if (err) { return console.log('error deleting database ' + dbName + ': ', err); }
                         console.log('deleted database ' + dbName);
