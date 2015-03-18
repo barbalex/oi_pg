@@ -8,11 +8,10 @@
 
 var nano                    = require('nano')('http://barbalex:dLhdMg12@127.0.0.1:5984'),
     _                       = require('underscore'),
-    handleChangesIn_usersDb = require('./handleChangesIn_usersDb'),
-    feed;
+    handleChangesIn_usersDb = require('./handleChangesIn_usersDb');
 
 module.exports = function () {
-    feed = nano.use('_users').follow({
+    var feed = nano.use('_users').follow({
         since:        'now',
         live:         true,
         include_docs: true
