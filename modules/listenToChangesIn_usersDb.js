@@ -11,13 +11,18 @@ var nano                    = require('nano')('http://barbalex:dLhdMg12@127.0.0.
     handleChangesIn_usersDb = require('./handleChangesIn_usersDb');
 
 module.exports = function () {
-    var feed = nano.use('_users').follow({
-        since:        'now',
-        live:         true,
-        include_docs: true
-    });
-    feed.on('change', handleChangesIn_usersDb);
-    feed.follow();
-    // output result
-    console.log('listening to changes of _users');
+    var feed;
+
+    if (!GLOBAL._users) {
+        feed = nano.use('_users').follow({
+            since:        'now',
+            live:         true,
+            include_docs: true
+        });
+        feed.on('change', handleChangesIn_usersDb);
+        feed.follow();
+        GLOBAL._users = feed;
+        // output result
+        console.log('listening to changes of _users');
+    }
 };

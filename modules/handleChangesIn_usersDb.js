@@ -31,6 +31,8 @@ var nano                      = require('nano')('http://barbalex:dLhdMg12@127.0.
 
 module.exports = function (change) {
 
+    console.log('handleChangesIn_usersDb: change: ', change);
+
     // check the revs
     _usersDb.get(change.id, { revs: true, open_revs: 'all' }, function (err, body) {
         if (err) { return console.log('error getting revs of doc: ', err); }
@@ -42,8 +44,6 @@ module.exports = function (change) {
             userName,
             userProjects,
             messageDb;
-
-        console.log('user change: ', change);
 
         messageDb = nano.use('oi_messages');
 

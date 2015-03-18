@@ -19,65 +19,74 @@ module.exports = function (userDb, change) {
     userDb.get(change.id, { revs: true, open_revs: 'all' }, function (err, body) {
         if (err) { return console.log('error getting revs of doc: ', err); }
 
-        var revisions = body[0].ok._revisions,
-            revHash   = revisions.start - 1 + '-' + revisions.ids[1],
-            securityDoc;
+        var securityDoc,
+            rolesAdded,
+            rolesRemoved,
+            newDoc,
+            oldDoc;
 
-        console.log('change: ', change);
+        //console.log('handleChangesInUserDb: change: ', change);
+        console.log('handleChangesInUserDb: body[0].ok: ', body[0].ok);
 
-        userDb.get(change.id, { rev: revHash}, function (err, oldDoc) {
-            if (err) { return console.log('error getting doc version before changed: ', err); }
-            var rolesAdded,
-                rolesRemoved,
-                newDoc;
+        if (!body[1]) {
+            // this is a new user doc
+            // there will be no roles yet
+            return console.log('new user doc, not setting roles');
+        }
 
-            newDoc = change.doc;
-            // compare with last version
-            if (oldDoc.roles && newDoc.roles && oldDoc.roles !== newDoc.roles) {
-                // roles have changed
-                // always update roles in _users DB
-                _usersDb.get(newDoc._id, function (error, userDoc) {
-                    if (error) { console.log('error getting user from _users db: ', error); }
-                    userDoc.roles = newDoc.roles;
-                    _usersDb.insert(userDoc, function (error) {
-                        if (error) { console.log('error updating user in _users db: ', error); }
-                        rolesAdded   = _.without(newDoc.roles, oldDoc.roles);
-                        rolesRemoved = _.without(oldDoc.roles, newDoc.roles);
+        newDoc = change.doc;
+        oldDoc = body[1].ok;
 
-                        if (rolesAdded) {
-                            // if roles were added: create new projectDb's if they don't exist yet
-                            // get list of projectDb's
-                            nano.db.list(function (error, dbNames) {
-                                if (error) { return console.log('error getting list of users from _users db: ', error); }
-                                // create new projectDb if it does not exist yet
-                                _.each(rolesAdded, function (roleAdded) {
-                                    if (_.indexOf(dbNames, roleAdded) === -1) {
-                                        nano.db.create(roleAdded, function (err) {
-                                            if (err) { return console.log('error creating new database ' + roleAdded + ': ', err); }
+        console.log('handleChangesInUserDb: body[1].ok: ', body[1].ok);
 
-                                            console.log('created new db: ', roleAdded);
+        // compare with last version
+        if (oldDoc.roles && newDoc.roles && oldDoc.roles !== newDoc.roles) {
+            // roles have changed
+            // always update roles in _users DB
+            _usersDb.get(newDoc._id, function (error, userDoc) {
+                if (error) { console.log('error getting user from _users db: ', error); }
+                userDoc.roles = newDoc.roles;
+                _usersDb.insert(userDoc, function (error) {
+                    if (error) { console.log('error updating user in _users db: ', error); }
+                    rolesAdded   = _.without(newDoc.roles, oldDoc.roles);
+                    rolesRemoved = _.without(oldDoc.roles, newDoc.roles);
 
-                                            // set up permissions for this role
-                                            securityDoc = createSecurityDoc(null, roleAdded, 'barbalex');
-                                            nano.use(roleAdded).insert(securityDoc, '_security', function (err, body) {
-                                                if (err) { return console.log('error setting _security in new project DB ' + roleAdded + ': ', err); }
-                                                //console.log('answer from setting _security in new project DB: ', body);
-                                            });
+                    console.log('handleChangesInUserDb: rolesAdded: ', rolesAdded);
+                    console.log('handleChangesInUserDb: rolesRemoved: ', rolesRemoved);
+
+                    if (rolesAdded) {
+                        // if roles were added: create new projectDb's if they don't exist yet
+                        // get list of projectDb's
+                        nano.db.list(function (error, dbNames) {
+                            if (error) { return console.log('error getting list of users from _users db: ', error); }
+                            // create new projectDb if it does not exist yet
+                            _.each(rolesAdded, function (roleAdded) {
+                                if (_.indexOf(dbNames, roleAdded) === -1) {
+                                    nano.db.create(roleAdded, function (err) {
+                                        if (err) { return console.log('error creating new database ' + roleAdded + ': ', err); }
+
+                                        console.log('created new db: ', roleAdded);
+
+                                        // set up permissions for this role
+                                        securityDoc = createSecurityDoc(null, roleAdded, 'barbalex');
+                                        nano.use(roleAdded).insert(securityDoc, '_security', function (err, body) {
+                                            if (err) { return console.log('error setting _security in new project DB ' + roleAdded + ': ', err); }
+                                            //console.log('answer from setting _security in new project DB: ', body);
                                         });
-                                    }
-                                });
+                                    });
+                                }
                             });
-                        }
+                        });
+                    }
 
-                        if (rolesRemoved) {
-                            // if roles were removed: remove projectDb's if no other users use them
-                            _.each(rolesRemoved, function (roleRemoved) {
-                                deleteDatabase(roleRemoved);
-                            });
-                        }
-                    });
+                    if (rolesRemoved) {
+                        // if roles were removed: remove projectDb's if no other users use them
+                        _.each(rolesRemoved, function (roleRemoved) {
+                            deleteDatabase(roleRemoved);
+                        });
+                    }
                 });
-            }
-        });
+            });
+        }
     });
 };
