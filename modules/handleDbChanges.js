@@ -58,11 +58,13 @@ module.exports = function (change) {
                 }
                 if (userDoc) {
 
-                    console.log('handleDbChanges: userDoc:', userDoc);
+                    //console.log('handleDbChanges: userDoc:', userDoc);
 
                     projects      = userDoc.roles;
                     userName      = userDoc.name;
                     userDoc.roles = [];
+                    // pass global to handleChangesIn_usersDb as marker to not recreate userDb
+                    GLOBAL.deleteUserDb = true;
                     _usersDb.insert(userDoc, function (error) {
                         if (error) { return console.log('handleDbChanges: error inserting userDoc:', error); }
                     });

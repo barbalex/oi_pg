@@ -32,7 +32,7 @@ module.exports = function (userName, projects) {
                 return _.indexOf(doc.roles, project) > -1;
             });
             if (!otherUserUsingProject) {
-                deleteDatabase('project_' + project);
+                deleteDatabase(project);
             }
         });
     });

@@ -26,7 +26,7 @@ module.exports = function (change) {
 
     // check the revs
     _usersDb.get(change.id, { revs: true, open_revs: 'all' }, function (error, body) {
-        if (error) { return console.log('error getting revs of doc: ', error); }
+        if (error) { return console.log('handleChangesIn_usersDb: error getting revs of doc: ', error); }
 
         var revisions   = body[0].ok._revisions,
             revOfOldDoc = revisions.start - 1 + '-' + revisions.ids[1],
@@ -43,7 +43,7 @@ module.exports = function (change) {
             // user was deleted > no doc in change
             // get last doc version before deleted to know the user.name and user.roles
             _usersDb.get(change.id, { rev: revOfOldDoc}, function (error, doc) {
-                if (error) { return console.log('error getting userDoc version before deleted: ', error); }
+                if (error) { return console.log('handleChangesIn_usersDb: error getting userDoc version before deleted: ', error); }
                 if (doc) {
                     // a user was deleted
                     userName     = doc.name;
@@ -65,18 +65,25 @@ module.exports = function (change) {
 
                     // remove user from members of message db
                     messageDb.get('_security', function (error, doc) {
-                        if (error) { console.log('error getting _security of message db: ', error); }
+                        if (error) { console.log('handleChangesIn_usersDb: error getting _security of message db: ', error); }
                         doc.members.names = _.without(doc.members.names, userName);
                     });
                 }
             });
         } else {
+            // PROBLEM: userDb gets created when userDb was removed,
+            // because the roles are then removed from _users db
+            // solution: handleDbChanges passes GLOBAL.deleteUserDb
+            if (GLOBAL.deleteUserDb) {
+                return delete GLOBAL.deleteUserDb;
+            }
+
             userDoc    = change.doc;
             userName   = userDoc.name;
             userDbName = getUserDbName(userName);
             // get list of all databases
             nano.db.list(function (error, dbNames) {
-                if (error) { return console.log('error getting list of dbs'); }
+                if (error) { return console.log('handleChangesIn_usersDb: error getting list of dbs'); }
 
                 var securityDoc,
                     userDb;
@@ -86,16 +93,16 @@ module.exports = function (change) {
                     // a new user was created
                     // create a new user db
                     nano.db.create(userDbName, function (error) {
-                        if (error) { return console.log('error creating new user database ' + userDbName + ': ', error); }
+                        if (error) { return console.log('handleChangesIn_usersDb: error creating new user database ' + userDbName + ': ', error); }
 
-                        console.log('created new user db: ', userDbName);
+                        console.log('handleChangesIn_usersDb: created new user db: ', userDbName);
 
                         userDb = nano.use(userDbName);
                         // set up read permissions for the user
                         // create security doc
                         securityDoc = createSecurityDoc(userName, null, 'barbalex');
                         userDb.insert(securityDoc, '_security', function (error) {
-                            if (error) { return console.log('error setting _security in new user DB: ', error); }
+                            if (error) { return console.log('handleChangesIn_usersDb: error setting _security in new user DB: ', error); }
                         });
                         // add the user as doc, without rev and some other fields
                         delete userDoc._rev;
@@ -104,7 +111,7 @@ module.exports = function (change) {
                         delete userDoc.iterations;
                         delete userDoc.password_scheme;
                         userDb.insert(userDoc, function (error) {
-                            if (error) { return console.log('error adding user doc to new user DB ' + userDbName + ': ', error); }
+                            if (error) { return console.log('handleChangesIn_usersDb: error adding user doc to new user DB ' + userDbName + ': ', error); }
                             // start listening to changes
                             listenToChangesInUsersDbs([userDbName]);
                         });
