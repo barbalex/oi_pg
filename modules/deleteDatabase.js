@@ -26,10 +26,13 @@ module.exports = function (dbName) {
                     console.log('db ' + dbName + ' not deleted because used by other user');
                 } else {
                     // stop listening to changes
-                    if (GLOBAL[dbName]) { GLOBAL[dbName].stop(); }
+                    if (GLOBAL[dbName]) {
+                        GLOBAL[dbName].stop();
+                        console.log('deleteDatabase: stopped listening to feed of ' + dbName);
+                    }
                     nano.db.destroy(dbName, function (err) {
                         if (err) { return console.log('error deleting database ' + dbName + ': ', err); }
-                        console.log('deleted database ' + dbName);
+                        console.log('deleteDatabase: deleted database ' + dbName);
                     });
                 }
             });

@@ -23,6 +23,6 @@ module.exports = function () {
         feed.follow();
         GLOBAL._users = feed;
         // output result
-        console.log('listening to changes of _users');
+        console.log('listening to changes in _users');
     }
 };

@@ -29,7 +29,7 @@ module.exports = function (userDbs) {
             // give the feed a name so it can later be stopped
             GLOBAL[userDb] = feed;
             // output result
-            console.log('listening to changes in userDb ', userDb);
+            console.log('listening to changes in', userDb);
         }
     });
 };

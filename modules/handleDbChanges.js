@@ -1,0 +1,66 @@
+/*jslint node: true, browser: true, nomen: true, todo: true */
+'use strict';
+
+var nano                  = require('nano')('http://barbalex:dLhdMg12@127.0.0.1:5984'),
+    _                     = require('underscore'),
+    _usersDb              = nano.use('_users'),
+    getUserDbName         = require('./getUserDbName'),
+    removeUsersProjectDbs = require('./removeUsersProjectDbs');
+
+module.exports = function (change) {
+    //console.log('handleDbChanges: db change: ', change);
+
+    var isUserDb,
+        dbName   = change.db_name,
+        projects = [],
+        userName;
+
+    isUserDb = dbName.substring(0, 5) === 'user_' ? true : false;
+
+    //console.log('handleDbChanges: isUserDb: ', isUserDb);
+    //console.log('handleDbChanges: dbName: ', dbName);
+
+    if (change.type === 'deleted') {
+
+        console.log('handleDbChanges: db change: ', change);
+
+        if (GLOBAL[dbName]) {
+            console.log('handleDbChanges: Removing feed following changes in ' + dbName);
+            // stop feed following the db
+            GLOBAL[dbName].stop();
+        }
+        // if isUserDb remove user roles from _users db
+        // find user in _users
+        _usersDb.list({include_docs: true}, function (error, body) {
+            if (error) { return console.log('error getting list of _users: ', error); }
+            var userRow,
+                userDoc;
+
+            userRow = _.find(body.rows, function (row) {
+                // there seems to be a design doc in the _users db
+                // return only docs with id beginning with org.couchdb.user:
+                if (row.id.substring(0, 17) === 'org.couchdb.user:') {
+                    return getUserDbName(row.doc.name) === dbName;
+                }
+            });
+            if (userRow) {
+                userDoc = userRow.doc;
+            }
+            if (userDoc) {
+
+                console.log('handleDbChanges: userDoc:', userDoc);
+
+                projects      = userDoc.roles;
+                userName      = userDoc.name;
+                userDoc.roles = [];
+                _usersDb.insert(userDoc, function (error) {
+                    if (error) { return console.log('handleDbChanges: error inserting userDoc:', error); }
+                });
+                // remove all the user's projectDb's
+                if (userName && projects) {
+                    removeUsersProjectDbs(userName, projects);
+                }
+            }
+        });
+    }
+};

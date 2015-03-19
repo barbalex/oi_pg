@@ -1,10 +1,11 @@
 /*jslint node: true, browser: true, nomen: true, todo: true */
 'use strict';
 
-var nano                       = require('nano')('http://barbalex:dLhdMg12@127.0.0.1:5984'),
-    _                          = require('underscore'),
-    listenToChangesIn_usersDb  = require('./modules/listenToChangesIn_usersDb'),
-    listenToChangesInUsersDbs  = require('./modules/listenToChangesInUsersDbs');
+var nano                      = require('nano')('http://barbalex:dLhdMg12@127.0.0.1:5984'),
+    _                         = require('underscore'),
+    listenToChangesIn_usersDb = require('./modules/listenToChangesIn_usersDb'),
+    listenToChangesInUsersDbs = require('./modules/listenToChangesInUsersDbs'),
+    listenToDbChanges         = require('./modules/listenToDbChanges');
 
 // list all db's
 nano.db.list(function (error, dbs) {
@@ -18,4 +19,5 @@ nano.db.list(function (error, dbs) {
 
     listenToChangesIn_usersDb();
     listenToChangesInUsersDbs(userDbs);
+    listenToDbChanges();
 });
