@@ -1,21 +1,11 @@
 /*
- * Goal is:
- * - every user has a userDb
- * - it contains user specific information
- * - namely: a list of projects
- * - the userDb is synced to pouch
- * - when the app starts up, it get's a list of projects from the userDb
- * - and loads the projects data
- *
- * When a users userDoc was changed, it is changed in the userDb too
- * When a users userDoc was deleted:
- * - the user Db is deleted
- * - the users project-DB's too, if no other user was using them
- * When a new user is created:
- * - a userDb is created
- * - with exclusive rights
- * - the _users userDoc is added to the userDb
- * - oi_pg starts listening to changes in the userDb
+ * when a new user signs up,
+ * a new userDb is created
+ * and listening to it's changes started
+ * 
+ * when a user is deleted,
+ * his projectDb's are removed,
+ * if no other user uses them
  */
 
 /*jslint node: true, browser: true, nomen: true, todo: true */
@@ -32,24 +22,19 @@ var nano                      = require('nano')('http://barbalex:dLhdMg12@127.0.
 
 module.exports = function (change) {
 
-    console.log('handleChangesIn_usersDb: change: ', change);
+    //console.log('handleChangesIn_usersDb: change: ', change);
 
     // check the revs
-    _usersDb.get(change.id, { revs: true, open_revs: 'all' }, function (err, body) {
-        if (err) { return console.log('error getting revs of doc: ', err); }
+    _usersDb.get(change.id, { revs: true, open_revs: 'all' }, function (error, body) {
+        if (error) { return console.log('error getting revs of doc: ', error); }
 
         var revisions   = body[0].ok._revisions,
             revOfOldDoc = revisions.start - 1 + '-' + revisions.ids[1],
             userDoc,
-            userRev,
             userDbName,
             userName,
             userProjects,
             messageDb;
-
-
-        //console.log('handleChangesIn_usersDb: body from get change.id: ', body);
-        console.log('handleChangesIn_usersDb: body[0].ok._revisions: ', revisions);
 
         messageDb = nano.use('oi_messages');
 
@@ -57,8 +42,8 @@ module.exports = function (change) {
         if (change.deleted) {
             // user was deleted > no doc in change
             // get last doc version before deleted to know the user.name and user.roles
-            _usersDb.get(change.id, { rev: revOfOldDoc}, function (err, doc) {
-                if (err) { return console.log('error getting userDoc version before deleted: ', err); }
+            _usersDb.get(change.id, { rev: revOfOldDoc}, function (error, doc) {
+                if (error) { return console.log('error getting userDoc version before deleted: ', error); }
                 if (doc) {
                     // a user was deleted
                     userName     = doc.name;
@@ -86,59 +71,46 @@ module.exports = function (change) {
                 }
             });
         } else {
-            // this is a new user
-            userDoc  = change.doc;
-            userName = userDoc.name;
-            userRev  = userDoc._rev;
+            userDoc    = change.doc;
+            userName   = userDoc.name;
+            userDbName = getUserDbName(userName);
+            // get list of all databases
+            nano.db.list(function (error, dbNames) {
+                if (error) { return console.log('error getting list of dbs'); }
 
-            console.log('userRev.substring(0, 2): ', userRev.substring(0, 2));
-            console.log('revisions.ids.length: ', revisions.ids.length);
+                var securityDoc,
+                    userDb;
 
-            // only go on if new user
-            if (userRev.substring(0, 2) === '1-') {
-            //if (revisions.ids.length === 1) {
-                userDbName = getUserDbName(userName);
-                // get list of all databases
-                nano.db.list(function (error, dbNames) {
-                    var securityDoc,
-                        userDb;
+                if (_.indexOf(dbNames, userDbName) === -1) {
+                    // this user has no uderDb yet
+                    // a new user was created
+                    // create a new user db
+                    nano.db.create(userDbName, function (error) {
+                        if (error) { return console.log('error creating new user database ' + userDbName + ': ', error); }
 
-                    if (error) { return console.log('error getting list of dbs'); }
-                    //console.log('dbs: ', body);
-                    if (_.indexOf(dbNames, userDbName) === -1) {
-                        // a new user was created
-                        // create a new user db
-                        nano.db.create(userDbName, function (err) {
-                            if (err) { return console.log('error creating new user database ' + userDbName + ': ', err); }
+                        console.log('created new user db: ', userDbName);
 
-                            console.log('created new user db: ', userDbName);
-
-                            userDb = nano.use(userDbName);
-                            // set up read permissions for the user
-                            // create security doc
-                            securityDoc = createSecurityDoc(userName, null, 'barbalex');
-                            userDb.insert(securityDoc, '_security', function (err, body) {
-                                if (err) { return console.log('error setting _security in new user DB: ', err); }
-                                //console.log('answer from setting _security in new user DB: ', body);
-                            });
-
-                            // add the user as doc, without rev
-                            delete userDoc._rev;
-                            delete userDoc.salt;
-                            delete userDoc.derived_key;
-                            delete userDoc.iterations;
-                            delete userDoc.password_scheme;
-                            userDb.insert(userDoc, function (err, body) {
-                                if (err) { return console.log('error adding user doc to new user DB ' + userDbName + ': ', err); }
-                                //console.log('answer from adding user doc to new user DB: ', body);
-                            });
-
+                        userDb = nano.use(userDbName);
+                        // set up read permissions for the user
+                        // create security doc
+                        securityDoc = createSecurityDoc(userName, null, 'barbalex');
+                        userDb.insert(securityDoc, '_security', function (error) {
+                            if (error) { return console.log('error setting _security in new user DB: ', error); }
+                        });
+                        // add the user as doc, without rev and some other fields
+                        delete userDoc._rev;
+                        delete userDoc.salt;
+                        delete userDoc.derived_key;
+                        delete userDoc.iterations;
+                        delete userDoc.password_scheme;
+                        userDb.insert(userDoc, function (error) {
+                            if (error) { return console.log('error adding user doc to new user DB ' + userDbName + ': ', error); }
                             // start listening to changes
                             listenToChangesInUsersDbs([userDbName]);
                         });
-                    }
-                });
-            }
+                    });
+                }
+            });
         }
     });
 };

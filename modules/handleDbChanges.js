@@ -1,3 +1,10 @@
+/*
+ * when a db is deleted
+ * - if there is an active change listener this will be stopped
+ * - if it was a user db, it's userDoc's last roles are removed from the _users doc
+ *   and the corresponding projectDb's removed if no other user uses them
+ */
+
 /*jslint node: true, browser: true, nomen: true, todo: true */
 'use strict';
 
@@ -11,10 +18,11 @@ module.exports = function (change) {
     //console.log('handleDbChanges: db change: ', change);
 
     var isUserDb,
-        dbName   = change.db_name,
-        projects = [],
+        dbName,
+        projects,
         userName;
 
+    dbName   = change.db_name;
     isUserDb = dbName.substring(0, 5) === 'user_' ? true : false;
 
     //console.log('handleDbChanges: isUserDb: ', isUserDb);
@@ -29,38 +37,41 @@ module.exports = function (change) {
             // stop feed following the db
             GLOBAL[dbName].stop();
         }
-        // if isUserDb remove user roles from _users db
-        // find user in _users
-        _usersDb.list({include_docs: true}, function (error, body) {
-            if (error) { return console.log('error getting list of _users: ', error); }
-            var userRow,
-                userDoc;
+        if (isUserDb) {
+            // if isUserDb remove user roles from _users db
+            // find user in _users
+            _usersDb.list({include_docs: true}, function (error, body) {
+                if (error) { return console.log('error getting list of _users: ', error); }
 
-            userRow = _.find(body.rows, function (row) {
-                // there seems to be a design doc in the _users db
-                // return only docs with id beginning with org.couchdb.user:
-                if (row.id.substring(0, 17) === 'org.couchdb.user:') {
-                    return getUserDbName(row.doc.name) === dbName;
+                var userRow,
+                    userDoc;
+
+                userRow = _.find(body.rows, function (row) {
+                    // there seems to be a design doc in the _users db
+                    // return only docs with id beginning with org.couchdb.user:
+                    if (row.id.substring(0, 17) === 'org.couchdb.user:') {
+                        return getUserDbName(row.doc.name) === dbName;
+                    }
+                });
+                if (userRow) {
+                    userDoc = userRow.doc;
+                }
+                if (userDoc) {
+
+                    console.log('handleDbChanges: userDoc:', userDoc);
+
+                    projects      = userDoc.roles;
+                    userName      = userDoc.name;
+                    userDoc.roles = [];
+                    _usersDb.insert(userDoc, function (error) {
+                        if (error) { return console.log('handleDbChanges: error inserting userDoc:', error); }
+                    });
+                    // remove all the user's projectDb's
+                    if (userName && projects) {
+                        removeUsersProjectDbs(userName, projects);
+                    }
                 }
             });
-            if (userRow) {
-                userDoc = userRow.doc;
-            }
-            if (userDoc) {
-
-                console.log('handleDbChanges: userDoc:', userDoc);
-
-                projects      = userDoc.roles;
-                userName      = userDoc.name;
-                userDoc.roles = [];
-                _usersDb.insert(userDoc, function (error) {
-                    if (error) { return console.log('handleDbChanges: error inserting userDoc:', error); }
-                });
-                // remove all the user's projectDb's
-                if (userName && projects) {
-                    removeUsersProjectDbs(userName, projects);
-                }
-            }
-        });
+        }
     }
 };
