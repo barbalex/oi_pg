@@ -13,7 +13,7 @@ module.exports = function (dbName) {
             // check if a user uses this db
             _usersDb.list(function (error, body) {
                 if (error) { return console.log('error getting list of users from _users db: ', error); }
-                var users = body.rows,
+                var users      = body.rows,
                     usersRoles = [];
 
                 _.each(users, function (user) {
@@ -25,7 +25,7 @@ module.exports = function (dbName) {
                     // DONT remove it
                     console.log('db ' + dbName + ' not deleted because used by other user');
                 } else {
-                    // stop listening to changes to userDb
+                    // stop listening to changes
                     if (GLOBAL[dbName]) { GLOBAL[dbName].stop(); }
                     nano.db.destroy(dbName, function (err) {
                         if (err) { return console.log('error deleting database ' + dbName + ': ', err); }

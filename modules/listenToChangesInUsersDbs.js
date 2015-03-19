@@ -15,7 +15,7 @@ module.exports = function (userDbs) {
 
     // start listening to changes in all project-dbs
     _.each(userDbs, function (userDb) {
-        // make shure the feed does not exist yet
+        // make sure the feed does not exist yet
         if (!GLOBAL[userDb]) {
             feed = nano.use(userDb).follow({
                 since:        'now',
@@ -27,7 +27,6 @@ module.exports = function (userDbs) {
             });
             feed.follow();
             // give the feed a name so it can later be stopped
-            //feed = GLOBAL[userDb];
             GLOBAL[userDb] = feed;
             // output result
             console.log('listening to changes in userDb ', userDb);
