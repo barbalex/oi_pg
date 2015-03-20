@@ -15,7 +15,8 @@ var nano                  = require('nano')('http://barbalex:dLhdMg12@127.0.0.1:
     _                     = require('underscore'),
     deleteDatabase        = require('./deleteDatabase'),
     createSecurityDoc     = require('./createSecurityDoc'),
-    removeUsersProjectDbs = require('./removeUsersProjectDbs');
+    removeUsersProjectDbs = require('./removeUsersProjectDbs'),
+    createProjectDb       = require('./createProjectDb');
 
 module.exports = function (newDoc, oldDoc) {
     var rolesAdded,
@@ -41,26 +42,8 @@ module.exports = function (newDoc, oldDoc) {
                 console.log('handleChangesInUserDb: rolesRemoved: ', rolesRemoved);
 
                 if (rolesAdded) {
-                    // if roles were added: create new projectDb's if they don't exist yet
-                    // get list of DB's in couch
-                    nano.db.list(function (error, dbNames) {
-                        if (error) { return console.log('error getting list of db\'s: ', error); }
-                        // create new projectDb if it does not exist yet
-                        _.each(rolesAdded, function (roleAdded) {
-                            if (_.indexOf(dbNames, roleAdded) === -1) {
-                                nano.db.create(roleAdded, function (error) {
-                                    if (error) { return console.log('error creating new db ' + roleAdded + ':', error); }
-
-                                    console.log('created new db: ', roleAdded);
-
-                                    // set up permissions for this role
-                                    securityDoc = createSecurityDoc(null, roleAdded, 'barbalex');
-                                    nano.use(roleAdded).insert(securityDoc, '_security', function (error) {
-                                        if (error) { return console.log('error setting _security in new db ' + roleAdded + ': ', error); }
-                                    });
-                                });
-                            }
-                        });
+                    _.each(rolesAdded, function (roleAdded) {
+                        createProjectDb(roleAdded);
                     });
                 }
                 if (rolesRemoved) {
