@@ -21,7 +21,6 @@ var nano                  = require('nano')('http://barbalex:dLhdMg12@127.0.0.1:
 module.exports = function (newDoc, oldDoc) {
     var rolesAdded,
         rolesRemoved,
-        securityDoc,
         userName;
 
     if ((oldDoc && newDoc && oldDoc.roles && newDoc.roles && oldDoc.roles !== newDoc.roles) || (!oldDoc && newDoc && newDoc.roles)) {
