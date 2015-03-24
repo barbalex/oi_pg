@@ -119,20 +119,13 @@ module.exports = function (change) {
                         delete userDoc.iterations;
                         delete userDoc.password_scheme;
 
-                        //console.log('userDoc: ', userDoc);
+                        // start listening to changes
+                        // start before inserting doc so the changes in roles are watched
+                        listenToChangesInUsersDbs([userDbName]);
 
                         userDb.insert(userDoc, function (error) {
                             if (error) { return console.log('handleChangesIn_usersDb: error adding user doc to new user DB ' + userDbName + ': ', error); }
-                            // start listening to changes
-                            listenToChangesInUsersDbs([userDbName]);
                         });
-
-                        // if new userDoc already has roles, create project db's
-                        if (userDoc.roles.length > 0) {
-                            var userDocOld = $.extend({}, userDoc);
-                            userDocOld.roles = [];
-                            updateUserDoc(userDoc, userDocOld);
-                        }
                     });
                 }
             });
