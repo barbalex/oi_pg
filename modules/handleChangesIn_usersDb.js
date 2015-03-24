@@ -43,7 +43,13 @@ module.exports = function (change) {
             // user was deleted > no doc in change
             // get last doc version before deleted to know the user.name and user.roles
             _usersDb.get(change.id, { rev: revOfOldDoc}, function (error, doc) {
-                if (error) { return console.log('handleChangesIn_usersDb: error getting userDoc version before deleted: ', error); }
+                if (error) {
+                    if (error.statusCode === 404) {
+                        // could not get previous version - this is expected if user was created new before
+                        return true;
+                    }
+                    return console.log('handleChangesIn_usersDb: error getting userDoc version before deleted: ', error);
+                }
                 if (doc) {
                     // a user was deleted
                     userName     = doc.name;
