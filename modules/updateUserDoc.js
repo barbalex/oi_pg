@@ -14,7 +14,6 @@ var nano                  = require('nano')('http://barbalex:dLhdMg12@127.0.0.1:
     _usersDb              = nano.use('_users'),
     _                     = require('underscore'),
     deleteDatabase        = require('./deleteDatabase'),
-    createSecurityDoc     = require('./createSecurityDoc'),
     removeUsersProjectDbs = require('./removeUsersProjectDbs'),
     createProjectDb       = require('./createProjectDb');
 
