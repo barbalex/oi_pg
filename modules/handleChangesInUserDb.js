@@ -53,6 +53,8 @@ module.exports = function (userDb, change) {
                 // always update roles in _users DB
                 updateUserDoc(newDoc, oldDoc);
             }
+
+            // TODO: make shure other changes to userDoc are copied to _users doc
         });
     });
 };
