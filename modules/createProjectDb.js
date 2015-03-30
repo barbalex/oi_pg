@@ -18,7 +18,7 @@ module.exports = function (projectDbName) {
     nano.db.list(function (error, dbNames) {
         if (error) { return console.log('error getting list of db\'s: ', error); }
         // create new projectDb if it does not exist yet
-        if (_.indexOf(dbNames, projectDbName) === -1) {
+        if (!_.contains(dbNames, projectDbName)) {
             nano.db.create(projectDbName, function (error) {
                 if (error) { return console.log('error creating new db ' + projectDbName + ':', error); }
 

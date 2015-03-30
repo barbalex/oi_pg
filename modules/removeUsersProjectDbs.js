@@ -29,7 +29,7 @@ module.exports = function (userName, projects) {
         _.each(projects, function (project) {
             // check if other user uses this project
             otherUserUsingProject = _.find(otherUsersDocs, function (doc) {
-                return _.indexOf(doc.roles, project) > -1;
+                return _.contains(doc.roles, project);
             });
             if (!otherUserUsingProject) {
                 deleteDatabase(project);

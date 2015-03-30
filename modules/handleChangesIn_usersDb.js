@@ -95,7 +95,7 @@ module.exports = function (change) {
                 var securityDoc,
                     userDb;
 
-                if (_.indexOf(dbNames, userDbName) === -1) {
+                if (_.contains(dbNames, userDbName)) {
                     // this user has no uderDb yet
                     // a new user was created
                     // create a new user db

@@ -9,7 +9,7 @@ module.exports = function (dbName) {
     // first check if this db still exists
     nano.db.list(function (error, dbNames) {
         if (error) { return console.log('error getting list of dbs: ', error); }
-        if (_.indexOf(dbNames, dbName) >= -1) {
+        if (_.contains(dbNames, dbName)) {
             // check if a user uses this db
             _usersDb.list(function (error, body) {
                 if (error) { return console.log('error getting list of users from _users db: ', error); }
