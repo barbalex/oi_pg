@@ -16,7 +16,7 @@ var nano          = require('nano')('http://barbalex:dLhdMg12@127.0.0.1:5984'),
 module.exports = function (userDb, change) {
     var newDoc = change.doc;
 
-    console.log('handleChangesInUserDb: newDoc: ', newDoc);
+    //console.log('handleChangesInUserDb: newDoc: ', newDoc);
 
     // check the revs
     userDb.get(change.id, { revs_info: true }, function (error, doc) {
@@ -26,7 +26,7 @@ module.exports = function (userDb, change) {
             revOfOldDoc;
 
         //console.log('handleChangesInUserDb: change: ', change);
-        console.log('handleChangesInUserDb: revisions: ', revisions);
+        //console.log('handleChangesInUserDb: revisions: ', revisions);
 
         if (revisions.length === 1) {
             // this is a new user doc
@@ -45,7 +45,7 @@ module.exports = function (userDb, change) {
                 return console.log('error getting last version of user doc: ', error);
             }
 
-            console.log('handleChangesInUserDb: oldDoc: ', oldDoc);
+            //console.log('handleChangesInUserDb: oldDoc: ', oldDoc);
 
             // compare with last version
             if (oldDoc && oldDoc.roles && newDoc.roles && oldDoc.roles !== newDoc.roles) {

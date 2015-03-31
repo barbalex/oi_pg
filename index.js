@@ -20,6 +20,6 @@ nano.db.list(function (error, dbs) {
 
     listenToChangesIn_usersDb();
     listenToChangesInUsersDbs(userDbs);
-    //listenToChangesInMessageDb();
+    listenToChangesInMessageDb();
     //listenToDbChanges();
 });
