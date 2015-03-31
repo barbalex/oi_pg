@@ -21,6 +21,62 @@ var nano                      = require('nano')('http://barbalex:dLhdMg12@127.0.
     getUserDbName             = require('./getUserDbName'),
     updateUserDoc             = require('./updateUserDoc');
 
+function onCreatedUserDb(userName, userDbName, userDoc) {
+    var securityDoc,
+        userDb;
+
+    userDb = nano.use(userDbName);
+
+    // set up read permissions for the user
+    // create security doc
+    // dont check if it exist yet - it always exists
+    // just make sure it's set correctly
+    securityDoc = createSecurityDoc(userName, null, 'barbalex');
+    userDb.insert(securityDoc, '_security', function (error) {
+        if (error) { return console.log('handleChangesIn_usersDb: error setting _security in new user DB: ', error); }
+    });
+
+    // start listening to changes
+    // start before inserting doc so the changes in roles are watched
+    listenToChangesInUsersDbs([userDbName]);
+
+    // add the user as doc, without rev and some other fields
+    delete userDoc._rev;
+    delete userDoc.salt;
+    delete userDoc.derived_key;
+    delete userDoc.iterations;
+    delete userDoc.password_scheme;
+
+    // make sure userDoc does not exist yet
+    userDb.get(userDoc._id, function (error, doc) {
+        var rolesBefore;
+
+        if (error) {
+            if (error.statusCode === 404) {
+                // userDoc does not exist yet
+                userDb.insert(userDoc, function (error) {
+                    if (error) { return console.log('handleChangesIn_usersDb: error adding user doc to new user DB ' + userDbName + ': ', error); }
+                    //console.log('handleChangesIn_usersDb: created user doc of new user DB ' + userDbName);
+                });
+            } else {
+                console.log('handleChangesIn_usersDb: error getting user doc of new user DB ' + userDbName + ': ', error);
+            }
+        } else {
+            // add roles
+
+            //console.log('handleChangesIn_usersDb: user doc for ' + userDbName + ' exists already');
+
+            rolesBefore = doc.roles;
+            doc.roles   = _.union(doc.roles, userDoc.roles);
+            if (rolesBefore.length !== doc.roles) {
+                userDb.insert(doc, function (error) {
+                    if (error) { return console.log('handleChangesIn_usersDb: error updating user doc in new user DB ' + userDbName + ': ', error); }
+                });
+            }
+        }
+    });
+}
+
 module.exports = function (change) {
 
     //console.log('handleChangesIn_usersDb: change: ', change);
@@ -92,40 +148,24 @@ module.exports = function (change) {
             nano.db.list(function (error, dbNames) {
                 if (error) { return console.log('handleChangesIn_usersDb: error getting list of dbs'); }
 
-                var securityDoc,
-                    userDb;
-
-                if (_.contains(dbNames, userDbName)) {
+                if (!_.contains(dbNames, userDbName)) {
                     // this user has no uderDb yet
                     // a new user was created
-                    // create a new user db
+                    // create a new user db if it does not exist yet
                     nano.db.create(userDbName, function (error) {
                         if (error) { return console.log('handleChangesIn_usersDb: error creating new user database ' + userDbName + ': ', error); }
 
-                        console.log('handleChangesIn_usersDb: created new user db: ', userDbName);
+                        //console.log('handleChangesIn_usersDb: created new user db: ', userDbName);
 
-                        userDb = nano.use(userDbName);
-                        // set up read permissions for the user
-                        // create security doc
-                        securityDoc = createSecurityDoc(userName, null, 'barbalex');
-                        userDb.insert(securityDoc, '_security', function (error) {
-                            if (error) { return console.log('handleChangesIn_usersDb: error setting _security in new user DB: ', error); }
-                        });
-                        // add the user as doc, without rev and some other fields
-                        delete userDoc._rev;
-                        delete userDoc.salt;
-                        delete userDoc.derived_key;
-                        delete userDoc.iterations;
-                        delete userDoc.password_scheme;
-
-                        // start listening to changes
-                        // start before inserting doc so the changes in roles are watched
-                        listenToChangesInUsersDbs([userDbName]);
-
-                        userDb.insert(userDoc, function (error) {
-                            if (error) { return console.log('handleChangesIn_usersDb: error adding user doc to new user DB ' + userDbName + ': ', error); }
-                        });
+                        onCreatedUserDb(userName, userDbName, userDoc);
                     });
+                } else {
+                    // problem: somehow the userdb is created directly by the app
+                    // dont know why, it should be impossible
+
+                    //console.log('handleChangesIn_usersDb: new user db ' + userDbName + ' exists already');
+
+                    onCreatedUserDb(userName, userDbName, userDoc);
                 }
             });
         }
