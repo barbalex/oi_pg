@@ -63,16 +63,17 @@ function onCreatedUserDb(userName, userDbName, userDoc) {
             }
         } else {
             // add roles
+            // nope, don't - this starts an endles loop because handleChangesInUserDb does this too
 
             //console.log('handleChangesIn_usersDb: user doc for ' + userDbName + ' exists already');
 
-            rolesBefore = doc.roles;
+            /*rolesBefore = doc.roles;
             doc.roles   = _.union(doc.roles, userDoc.roles);
             if (rolesBefore.length !== doc.roles) {
                 userDb.insert(doc, function (error) {
                     if (error) { return console.log('handleChangesIn_usersDb: error updating user doc in new user DB ' + userDbName + ': ', error); }
                 });
-            }
+            }*/
         }
     });
 }
