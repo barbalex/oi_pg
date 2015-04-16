@@ -10,8 +10,10 @@
 /*jslint node: true, browser: true, nomen: true, todo: true */
 'use strict';
 
-var nano          = require('nano')('http://barbalex:dLhdMg12@127.0.0.1:5984'),
-    updateUserDoc = require('./updateUserDoc');
+var _               = require('underscore'),
+    nano            = require('nano')('http://barbalex:dLhdMg12@127.0.0.1:5984'),
+    createProjectDb = require('./createProjectDb'),
+    updateUserDoc   = require('./updateUserDoc');
 
 module.exports = function (userDb, change) {
     var newDoc = change.doc;
@@ -31,6 +33,13 @@ module.exports = function (userDb, change) {
         if (revisions.length === 1) {
             // this is a new user doc
             // there will be no roles yet
+            // well, make shure
+            if (newDoc.roles && newDoc.roles.length > 0) {
+                _.each(newDoc.roles, function (roleAdded) {
+                    createProjectDb(roleAdded);
+                });
+                return console.log('new user doc, set it\'s roles');
+            }
             return console.log('new user doc, not setting roles');
         }
 
@@ -40,7 +49,7 @@ module.exports = function (userDb, change) {
             if (error) {
                 if (error.statusCode === 404) {
                     // old doc not found
-                    updateUserDoc(newDoc, null);
+                    return updateUserDoc(newDoc, null);
                 }
                 return console.log('error getting last version of user doc: ', error);
             }

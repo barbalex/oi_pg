@@ -154,7 +154,14 @@ module.exports = function (change) {
                     // a new user was created
                     // create a new user db if it does not exist yet
                     nano.db.create(userDbName, function (error) {
-                        if (error) { return console.log('handleChangesIn_usersDb: error creating new user database ' + userDbName + ': ', error); }
+                        if (error) {
+                            if (error.statusCode === 412) {
+                                // db exists already
+                                // go on incase roles have not been created yet
+                            } else {
+                                return console.log('handleChangesIn_usersDb: error creating new user database ' + userDbName + ': ', error);
+                            }
+                        }
 
                         //console.log('handleChangesIn_usersDb: created new user db: ', userDbName);
 
