@@ -14,8 +14,8 @@
   "author": "Alexander Gabriel",
   "license": "ISC",
   "dependencies": {
-    "nano": "^6.0.2",
-    "underscore": "^1.7.0"
+    "nano": "^6.1.2",
+    "underscore": "^1.8.3"
   },
   "devDependencies": {}
 }
