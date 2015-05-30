@@ -6,30 +6,29 @@
  * so users with the role can't change design docs
  */
 
-/*jslint node: true, browser: true, nomen: true, todo: true */
-'use strict';
+'use strict'
 
 module.exports = function (names, roles, admin) {
-    var securityDoc;
+  var securityDoc
 
-    admin       = admin || 'barbalex';
-    securityDoc = {
-        admins: {
-            names: [admin],
-            roles: []
-        },
-        members: {
-            names: [],
-            roles: []
-        }
-    };
-
-    if (names) {
-        securityDoc.members.names.push(names);
+  admin = admin || 'barbalex'
+  securityDoc = {
+    admins: {
+      names: [admin],
+      roles: []
+    },
+    members: {
+      names: [],
+      roles: []
     }
-    if (roles) {
-        securityDoc.members.roles.push(roles);
-    }
+  }
 
-    return securityDoc;
-};
+  if (names) {
+    securityDoc.members.names.push(names)
+  }
+  if (roles) {
+    securityDoc.members.roles.push(roles)
+  }
+
+  return securityDoc
+}
