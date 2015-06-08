@@ -5,7 +5,9 @@
 
 'use strict'
 
-var nano = require('nano')('http://barbalex:dLhdMg12@127.0.0.1:5984'),
+var couchPassfile = require('../couchpass.json'),
+  dbUrl = 'http://' + couchPassfile.user + ':' + couchPassfile.pass + '@127.0.0.1:5984',
+  nano = require('nano')(dbUrl),
   _ = require('underscore'),
   createSecurityDoc = require('./createSecurityDoc')
 
@@ -24,7 +26,7 @@ module.exports = function (projectDbName) {
         console.log('created new db: ', projectDbName)
 
         // set up permissions for this role
-        securityDoc = createSecurityDoc(null, projectDbName, 'barbalex')
+        securityDoc = createSecurityDoc(null, projectDbName, couchPassfile.user)
         nano.use(projectDbName).insert(securityDoc, '_security', function (error) {
           if (error) { return console.log('error setting _security in new db ' + projectDbName + ': ', error) }
         })

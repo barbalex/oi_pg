@@ -4,7 +4,9 @@
 
 'use strict'
 
-var nano = require('nano')('http://barbalex:dLhdMg12@127.0.0.1:5984'),
+var couchPassfile = require('../couchpass.json'),
+  dbUrl = 'http://' + couchPassfile.user + ':' + couchPassfile.pass + '@127.0.0.1:5984',
+  nano = require('nano')(dbUrl),
   handleChangesInMessageDb = require('./handleChangesInMessageDb')
 
 module.exports = function () {

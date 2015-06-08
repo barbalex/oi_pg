@@ -7,7 +7,9 @@
 'use strict'
 
 var _ = require('underscore'),
-  nano = require('nano')('http://barbalex:dLhdMg12@127.0.0.1:5984'),
+  couchPassfile = require('../couchpass.json'),
+  dbUrl = 'http://' + couchPassfile.user + ':' + couchPassfile.pass + '@127.0.0.1:5984',
+  nano = require('nano')(dbUrl),
   deleteDatabase = require('./deleteDatabase')
 
 module.exports = function (userName, projects) {

@@ -74,3 +74,5 @@ $RECYCLE.BIN/
 # Windows shortcuts
 *.lnk
 oi_pg.sublime-workspace
+couchPass.json
+node_modules/

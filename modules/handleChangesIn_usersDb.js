@@ -10,7 +10,9 @@
 
 'use strict'
 
-var nano = require('nano')('http://barbalex:dLhdMg12@127.0.0.1:5984'),
+var couchPassfile = require('../couchpass.json'),
+  dbUrl = 'http://' + couchPassfile.user + ':' + couchPassfile.pass + '@127.0.0.1:5984',
+  nano = require('nano')(dbUrl),
   _ = require('underscore'),
   _usersDb = nano.use('_users'),
   removeUsersProjectDbs = require('./removeUsersProjectDbs'),
@@ -29,7 +31,7 @@ function onCreatedUserDb (userName, userDbName, userDoc) {
   // create security doc
   // dont check if it exist yet - it always exists
   // just make sure it's set correctly
-  securityDoc = createSecurityDoc(userName, null, 'barbalex')
+  securityDoc = createSecurityDoc(userName, null, couchPassfile.user)
   userDb.insert(securityDoc, '_security', function (error) {
     if (error) { return console.log('handleChangesIn_usersDb: error setting _security in new user DB: ', error) }
   })
